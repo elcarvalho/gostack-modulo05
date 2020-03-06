@@ -5,7 +5,14 @@ import PropTypes from 'prop-types';
 import api from '../../services/api';
 
 import Container from '../../components/container';
-import { Loading, Owner, IssueList, Filters, FilterButton } from './styles';
+import {
+  Loading,
+  Owner,
+  IssueList,
+  Filters,
+  FilterButton,
+  Pagination,
+} from './styles';
 
 export default class Repository extends Component {
   static propTypes = {
@@ -22,11 +29,12 @@ export default class Repository extends Component {
     loading: true,
     repoName: '',
     state: 'open',
+    page: 1,
   };
 
   async componentDidMount() {
     const { match } = this.props;
-    const { state } = this.state;
+    const { state, page } = this.state;
 
     const repoName = decodeURIComponent(match.params.repository);
 
@@ -38,6 +46,7 @@ export default class Repository extends Component {
         params: {
           state,
           per_page: 5,
+          page,
         },
       }),
     ]);
@@ -58,7 +67,7 @@ export default class Repository extends Component {
 
     const issues = await api.get(`/repos/${repoName}/issues`, {
       params: {
-        newState,
+        state: newState,
         per_page: 5,
       },
     });
@@ -67,6 +76,31 @@ export default class Repository extends Component {
       issues: issues.data,
       loading: false,
       state: newState,
+      page: 1,
+    });
+  };
+
+  handlePaginate = async nav => {
+    const { page, repoName, state } = this.state;
+
+    const newPage = nav === 'next' ? page + 1 : page - 1;
+
+    if (newPage < 1) {
+      return;
+    }
+
+    const issues = await api.get(`/repos/${repoName}/issues`, {
+      params: {
+        state,
+        per_page: 5,
+        page: newPage,
+      },
+    });
+
+    this.setState({
+      issues: issues.data,
+      loading: false,
+      page: newPage,
     });
   };
 
@@ -132,6 +166,15 @@ export default class Repository extends Component {
             </li>
           ))}
         </IssueList>
+
+        <Pagination>
+          <button type="button" onClick={() => this.handlePaginate('prev')}>
+            Prev
+          </button>
+          <button type="button" onClick={() => this.handlePaginate('next')}>
+            Next
+          </button>
+        </Pagination>
       </Container>
     );
   }

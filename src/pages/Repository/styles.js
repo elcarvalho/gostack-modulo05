@@ -133,3 +133,13 @@ export const FilterButton = styled.button`
       border: 0;
     `}
 `;
+
+export const Pagination = styled.div`
+  display: flex;
+  justify-content: space-between;
+  margin-top: 30px;
+
+  button {
+    padding: 15px;
+  }
+`;
