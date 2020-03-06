@@ -5,7 +5,7 @@ import PropTypes from 'prop-types';
 import api from '../../services/api';
 
 import Container from '../../components/container';
-import { Loading, Owner, IssueList } from './styles';
+import { Loading, Owner, IssueList, Filters, FilterButton } from './styles';
 
 export default class Repository extends Component {
   static propTypes = {
@@ -20,18 +20,23 @@ export default class Repository extends Component {
     repository: {},
     issues: [],
     loading: true,
+    repoName: '',
+    state: 'open',
   };
 
   async componentDidMount() {
     const { match } = this.props;
+    const { state } = this.state;
 
     const repoName = decodeURIComponent(match.params.repository);
+
+    this.setState({ repoName });
 
     const [repository, issues] = await Promise.all([
       api.get(`/repos/${repoName}`),
       api.get(`/repos/${repoName}/issues`, {
         params: {
-          state: 'open',
+          state,
           per_page: 5,
         },
       }),
@@ -44,8 +49,29 @@ export default class Repository extends Component {
     });
   }
 
+  handleFilter = async newState => {
+    const { repoName, state } = this.state;
+
+    if (newState === state) {
+      return;
+    }
+
+    const issues = await api.get(`/repos/${repoName}/issues`, {
+      params: {
+        newState,
+        per_page: 5,
+      },
+    });
+
+    this.setState({
+      issues: issues.data,
+      loading: false,
+      state: newState,
+    });
+  };
+
   render() {
-    const { repository, issues, loading } = this.state;
+    const { repository, issues, loading, state } = this.state;
 
     if (loading) {
       return <Loading>Carregando</Loading>;
@@ -58,6 +84,34 @@ export default class Repository extends Component {
           <h1>{repository.name}</h1>
           <p>{repository.description}</p>
         </Owner>
+
+        <Filters>
+          <FilterButton
+            color="#3498db"
+            hover="#2980b9"
+            selected={state === 'all'}
+            onClick={() => this.handleFilter('all')}
+          >
+            Todas
+          </FilterButton>
+          <FilterButton
+            color="#1abc9c"
+            hover="#16a085"
+            selected={state === 'open'}
+            onClick={() => this.handleFilter('open')}
+          >
+            Abertas
+          </FilterButton>
+          <FilterButton
+            color="#e67e22"
+            hover="#d35400"
+            selected={state === 'closed'}
+            onClick={() => this.handleFilter('closed')}
+          >
+            Fechadas
+          </FilterButton>
+        </Filters>
+
         <IssueList>
           {issues.map(issue => (
             <li key={String(issue.id)}>
